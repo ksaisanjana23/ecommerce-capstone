@@ -17,16 +17,31 @@ public class ProductController {
         this.productService = productService;
     }
 
+    // Create a new product
     @PostMapping
     public Product createProduct(@RequestBody Product product) {
         return productService.createProduct(product);
     }
 
+    // Get all products
     @GetMapping
     public List<Product> getAllProducts() {
         return productService.getAllProducts();
     }
 
+    // Get products by category
+    @GetMapping("/category/{categoryId}")
+    public List<Product> getProductsByCategory(@PathVariable Long categoryId) {
+        return productService.getProductsByCategory(categoryId);
+    }
+
+    // Get products by brand
+    @GetMapping("/brand/{brandId}")
+    public List<Product> getProductsByBrand(@PathVariable Long brandId) {
+        return productService.getProductsByBrand(brandId);
+    }
+
+    // Get product by ID
     @GetMapping("/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable Long id) {
         return productService.getProductById(id)
@@ -34,6 +49,7 @@ public class ProductController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // Update product
     @PutMapping("/{id}")
     public Product updateProduct(
             @PathVariable Long id,
@@ -41,6 +57,7 @@ public class ProductController {
         return productService.updateProduct(id, product);
     }
 
+    // Delete product
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);

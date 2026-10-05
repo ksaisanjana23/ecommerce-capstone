@@ -50,6 +50,14 @@ public class ProductService {
         return productRepository.findAll();
     }
 
+    public List<Product> getProductsByCategory(Long categoryId) {
+        return productRepository.findByCategoryId(categoryId);
+    }
+
+    public List<Product> getProductsByBrand(Long brandId) {
+        return productRepository.findByBrandId(brandId);
+    }
+
     public Optional<Product> getProductById(Long id) {
         return productRepository.findById(id);
     }
