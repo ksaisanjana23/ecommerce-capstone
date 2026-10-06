@@ -14,13 +14,16 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final GiftPointService giftPointService;
 
     public PaymentService(
             PaymentRepository paymentRepository,
-            OrderRepository orderRepository) {
+            OrderRepository orderRepository,
+            GiftPointService giftPointService) {
 
         this.paymentRepository = paymentRepository;
         this.orderRepository = orderRepository;
+        this.giftPointService = giftPointService;
     }
 
     @Transactional
@@ -60,18 +63,20 @@ public class PaymentService {
 
         payment.setOrder(order);
         payment.setAmount(order.getTotalAmount());
+
         payment.setPaymentMethod(
                 paymentMethod.trim().toUpperCase()
         );
+
         payment.setStatus("SUCCESS");
 
         payment.setTransactionId(
                 "TXN-" +
-                UUID.randomUUID()
-                        .toString()
-                        .replace("-", "")
-                        .substring(0, 12)
-                        .toUpperCase()
+                        UUID.randomUUID()
+                                .toString()
+                                .replace("-", "")
+                                .substring(0, 12)
+                                .toUpperCase()
         );
 
         Payment savedPayment =
@@ -79,6 +84,12 @@ public class PaymentService {
 
         order.setStatus("CONFIRMED");
         orderRepository.save(order);
+
+        // Award 1 Gift Point for every ₹100 paid.
+        giftPointService.awardPoints(
+                userId,
+                order.getTotalAmount()
+        );
 
         return savedPayment;
     }

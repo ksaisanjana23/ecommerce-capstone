@@ -7,6 +7,10 @@ function Products() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [relatedTo, setRelatedTo] = useState("");
+  const [relatedLoading, setRelatedLoading] = useState(false);
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -28,13 +32,15 @@ function Products() {
     const userId = localStorage.getItem("userId");
 
     if (!token || !userId) {
-      setMessage("Please login before adding products to the cart.");
+      setMessage(
+        "Please login before adding products to the cart."
+      );
       return;
     }
 
     try {
       await api.post(`/cart/${userId}/items`, {
-        productId: productId,
+        productId,
         quantity: 1,
       });
 
@@ -42,6 +48,25 @@ function Products() {
     } catch (error) {
       console.error(error);
       setMessage("Unable to add product to cart.");
+    }
+  };
+
+  const handleRelatedProducts = async (product) => {
+    try {
+      setRelatedLoading(true);
+      setRelatedProducts([]);
+      setRelatedTo(product.name);
+
+      const response = await api.get(
+        `/products/${product.id}/related`
+      );
+
+      setRelatedProducts(response.data);
+    } catch (error) {
+      console.error(error);
+      setMessage("Unable to load related products.");
+    } finally {
+      setRelatedLoading(false);
     }
   };
 
@@ -78,7 +103,8 @@ function Products() {
               <p>{product.description}</p>
 
               <p>
-                <strong>Price:</strong> ₹{product.price}
+                <strong>Price:</strong>{" "}
+                ₹{Number(product.price).toFixed(2)}
               </p>
 
               <p>
@@ -97,14 +123,88 @@ function Products() {
               </p>
 
               <button
-                onClick={() => handleAddToCart(product.id)}
+                type="button"
+                onClick={() =>
+                  handleAddToCart(product.id)
+                }
+                disabled={product.stockQuantity <= 0}
               >
-                Add to Cart
+                {product.stockQuantity > 0
+                  ? "Add to Cart"
+                  : "Out of Stock"}
+              </button>
+
+              {" "}
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleRelatedProducts(product)
+                }
+              >
+                View Related Products
               </button>
 
               <hr />
             </div>
           ))}
+        </div>
+      )}
+
+      {relatedTo && (
+        <div>
+          <h2>
+            Related Products for {relatedTo}
+          </h2>
+
+          {relatedLoading ? (
+            <p>Loading related products...</p>
+          ) : relatedProducts.length === 0 ? (
+            <p>No related products found.</p>
+          ) : (
+            relatedProducts.map((product) => (
+              <div key={product.id}>
+                <h3>{product.name}</h3>
+
+                {product.imageUrl && (
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    width="120"
+                  />
+                )}
+
+                <p>{product.description}</p>
+
+                <p>
+                  <strong>Price:</strong>{" "}
+                  ₹{Number(product.price).toFixed(2)}
+                </p>
+
+                <p>
+                  <strong>Category:</strong>{" "}
+                  {product.category?.name}
+                </p>
+
+                <p>
+                  <strong>Brand:</strong>{" "}
+                  {product.brand?.name}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleAddToCart(product.id)
+                  }
+                  disabled={product.stockQuantity <= 0}
+                >
+                  {product.stockQuantity > 0
+                    ? "Add to Cart"
+                    : "Out of Stock"}
+                </button>
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>

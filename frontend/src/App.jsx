@@ -13,6 +13,8 @@ import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
 import Payment from "./pages/Payment";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import GiftPoints from "./pages/GiftPoints";
+import Recommendations from "./pages/Recommendations";
 
 function Home() {
   return (
@@ -31,11 +33,15 @@ function App() {
         {" | "}
         <Link to="/products">Products</Link>
         {" | "}
+        <Link to="/recommendations">Recommendations</Link>
+        {" | "}
         <Link to="/cart">Cart</Link>
         {" | "}
         <Link to="/checkout">Checkout</Link>
         {" | "}
         <Link to="/orders">Orders</Link>
+        {" | "}
+        <Link to="/gift-points">Gift Points</Link>
         {" | "}
         <Link to="/login">Login</Link>
         {" | "}
@@ -44,17 +50,56 @@ function App() {
 
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/checkout" element={<Checkout />} />
-        <Route path="/payment" element={<Payment />} />
+
+        <Route
+          path="/products"
+          element={<Products />}
+        />
+
+        <Route
+          path="/recommendations"
+          element={<Recommendations />}
+        />
+
+        <Route
+          path="/cart"
+          element={<Cart />}
+        />
+
+        <Route
+          path="/checkout"
+          element={<Checkout />}
+        />
+
+        <Route
+          path="/payment"
+          element={<Payment />}
+        />
+
         <Route
           path="/payment-success"
           element={<PaymentSuccess />}
         />
-        <Route path="/orders" element={<Orders />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+
+        <Route
+          path="/orders"
+          element={<Orders />}
+        />
+
+        <Route
+          path="/gift-points"
+          element={<GiftPoints />}
+        />
+
+        <Route
+          path="/login"
+          element={<Login />}
+        />
+
+        <Route
+          path="/register"
+          element={<Register />}
+        />
       </Routes>
     </BrowserRouter>
   );

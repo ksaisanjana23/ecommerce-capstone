@@ -22,6 +22,7 @@ public class ProductService {
             ProductRepository productRepository,
             CategoryRepository categoryRepository,
             BrandRepository brandRepository) {
+
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.brandRepository = brandRepository;
@@ -34,11 +35,15 @@ public class ProductService {
 
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() ->
-                        new RuntimeException("Category not found with id: " + categoryId));
+                        new RuntimeException(
+                                "Category not found with id: " + categoryId
+                        ));
 
         Brand brand = brandRepository.findById(brandId)
                 .orElseThrow(() ->
-                        new RuntimeException("Brand not found with id: " + brandId));
+                        new RuntimeException(
+                                "Brand not found with id: " + brandId
+                        ));
 
         product.setCategory(category);
         product.setBrand(brand);
@@ -62,28 +67,75 @@ public class ProductService {
         return productRepository.findById(id);
     }
 
-    public Product updateProduct(Long id, Product updatedProduct) {
+    public List<Product> getRelatedProducts(Long productId) {
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Product not found with id: " + productId
+                        ));
+
+        Long categoryId = product.getCategory().getId();
+
+        return productRepository
+                .findByCategoryIdAndIdNot(
+                        categoryId,
+                        productId
+                );
+    }
+
+    public Product updateProduct(
+            Long id,
+            Product updatedProduct) {
 
         Product existingProduct = productRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("Product not found with id: " + id));
+                        new RuntimeException(
+                                "Product not found with id: " + id
+                        ));
 
-        Long categoryId = updatedProduct.getCategory().getId();
-        Long brandId = updatedProduct.getBrand().getId();
+        Long categoryId =
+                updatedProduct.getCategory().getId();
 
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() ->
-                        new RuntimeException("Category not found with id: " + categoryId));
+        Long brandId =
+                updatedProduct.getBrand().getId();
 
-        Brand brand = brandRepository.findById(brandId)
-                .orElseThrow(() ->
-                        new RuntimeException("Brand not found with id: " + brandId));
+        Category category =
+                categoryRepository.findById(categoryId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Category not found with id: "
+                                                + categoryId
+                                ));
 
-        existingProduct.setName(updatedProduct.getName());
-        existingProduct.setDescription(updatedProduct.getDescription());
-        existingProduct.setPrice(updatedProduct.getPrice());
-        existingProduct.setStockQuantity(updatedProduct.getStockQuantity());
-        existingProduct.setImageUrl(updatedProduct.getImageUrl());
+        Brand brand =
+                brandRepository.findById(brandId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Brand not found with id: "
+                                                + brandId
+                                ));
+
+        existingProduct.setName(
+                updatedProduct.getName()
+        );
+
+        existingProduct.setDescription(
+                updatedProduct.getDescription()
+        );
+
+        existingProduct.setPrice(
+                updatedProduct.getPrice()
+        );
+
+        existingProduct.setStockQuantity(
+                updatedProduct.getStockQuantity()
+        );
+
+        existingProduct.setImageUrl(
+                updatedProduct.getImageUrl()
+        );
+
         existingProduct.setCategory(category);
         existingProduct.setBrand(brand);
 
@@ -93,7 +145,9 @@ public class ProductService {
     public void deleteProduct(Long id) {
 
         if (!productRepository.existsById(id)) {
-            throw new RuntimeException("Product not found with id: " + id);
+            throw new RuntimeException(
+                    "Product not found with id: " + id
+            );
         }
 
         productRepository.deleteById(id);
