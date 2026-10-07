@@ -9,13 +9,54 @@ function GiftPoints() {
   const [loading, setLoading] =
     useState(true);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
   const userId =
     localStorage.getItem("userId");
 
   const userName =
     localStorage.getItem("userName");
+
+  /*
+   * Backend LocalDateTime values are generated in UTC
+   * on the deployed Render server but do not contain
+   * timezone information.
+   *
+   * Treat timestamps without an offset as UTC before
+   * displaying them in India Standard Time.
+   */
+  const parseBackendDate = (dateValue) => {
+    if (!dateValue) {
+      return null;
+    }
+
+    const hasTimezone =
+      dateValue.endsWith("Z") ||
+      /[+-]\d{2}:\d{2}$/.test(dateValue);
+
+    return new Date(
+      hasTimezone ? dateValue : `${dateValue}Z`
+    );
+  };
+
+  const formatGiftPointDate = (dateValue) => {
+    const date = parseBackendDate(dateValue);
+
+    if (!date || Number.isNaN(date.getTime())) {
+      return "Date unavailable";
+    }
+
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }).format(date);
+  };
 
   useEffect(() => {
     const fetchGiftPoints = async () => {
@@ -201,9 +242,9 @@ function GiftPoints() {
               <span>Last Updated</span>
 
               <strong>
-                {new Date(
+                {formatGiftPointDate(
                   giftPoints.updatedAt
-                ).toLocaleString()}
+                )}
               </strong>
             </div>
           )}
