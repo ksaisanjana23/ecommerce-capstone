@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("info");
+
   const [processingOrderId, setProcessingOrderId] =
     useState(null);
+
   const [cancellingOrderId, setCancellingOrderId] =
     useState(null);
 
@@ -16,17 +19,23 @@ function Orders() {
 
   const fetchOrders = async () => {
     if (!userId) {
-      setMessage("Please login to view your orders.");
+      setMessage("Please sign in to view your orders.");
+      setMessageType("warning");
       setLoading(false);
       return;
     }
 
     try {
-      const response = await api.get(`/orders/${userId}`);
+      const response = await api.get(
+        `/orders/${userId}`
+      );
+
       setOrders(response.data);
     } catch (error) {
       console.error(error);
+
       setMessage("Unable to load order history.");
+      setMessageType("error");
     } finally {
       setLoading(false);
     }
@@ -53,6 +62,8 @@ function Orders() {
         error.response?.data?.message ||
           "Unable to add order items to cart."
       );
+
+      setMessageType("error");
     } finally {
       setProcessingOrderId(null);
     }
@@ -63,13 +74,17 @@ function Orders() {
       return false;
     }
 
-    const orderTime = new Date(order.orderDate).getTime();
+    const orderTime =
+      new Date(order.orderDate).getTime();
+
     const currentTime = Date.now();
 
     const fortyEightHours =
       48 * 60 * 60 * 1000;
 
-    return currentTime - orderTime <= fortyEightHours;
+    return (
+      currentTime - orderTime <= fortyEightHours
+    );
   };
 
   const handleCancelOrder = async (orderId) => {
@@ -93,6 +108,8 @@ function Orders() {
         `Order #${orderId} cancelled successfully.`
       );
 
+      setMessageType("success");
+
       await fetchOrders();
     } catch (error) {
       console.error(error);
@@ -101,125 +118,281 @@ function Orders() {
         error.response?.data?.message ||
           "Unable to cancel order."
       );
+
+      setMessageType("error");
     } finally {
       setCancellingOrderId(null);
     }
   };
 
+  const getStatusClass = (status) => {
+    switch (status) {
+      case "CONFIRMED":
+        return "status-confirmed";
+
+      case "CANCELLED":
+        return "status-cancelled";
+
+      case "PENDING":
+        return "status-pending";
+
+      default:
+        return "";
+    }
+  };
+
   if (loading) {
-    return <p>Loading orders...</p>;
+    return (
+      <div className="catalogue-state">
+        <div className="loading-spinner" />
+        <h2>Loading your orders...</h2>
+        <p>Retrieving your order history.</p>
+      </div>
+    );
+  }
+
+  if (!userId) {
+    return (
+      <div className="empty-page-state">
+        <span className="empty-page-icon">📦</span>
+
+        <h1>Your orders</h1>
+
+        <p>
+          Sign in to view your order history.
+        </p>
+
+        <Link
+          className="button button-primary"
+          to="/login"
+        >
+          Sign In
+        </Link>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h1>Order History</h1>
+    <div className="commerce-page">
+      <div className="page-header">
+        <div>
+          <span className="page-eyebrow">
+            Your Purchases
+          </span>
 
-      {message && <p>{message}</p>}
+          <h1>Order History</h1>
+
+          <p>
+            Review your purchases, buy your
+            favourite books again, or manage
+            eligible orders.
+          </p>
+        </div>
+
+        <div className="catalogue-count">
+          <strong>{orders.length}</strong>
+
+          <span>
+            {orders.length === 1
+              ? "Order"
+              : "Orders"}
+          </span>
+        </div>
+      </div>
+
+      {message && (
+        <div
+          className={`commerce-message ${messageType}`}
+        >
+          {message}
+        </div>
+      )}
 
       {orders.length === 0 ? (
-        <p>No orders found.</p>
+        <div className="empty-page-state">
+          <span className="empty-page-icon">
+            📚
+          </span>
+
+          <h2>No orders yet</h2>
+
+          <p>
+            Your completed purchases will appear
+            here.
+          </p>
+
+          <Link
+            className="button button-primary"
+            to="/products"
+          >
+            Browse Books
+          </Link>
+        </div>
       ) : (
-        orders.map((order) => (
-          <div key={order.id}>
-            <h2>Order #{order.id}</h2>
+        <div className="orders-list">
+          {orders.map((order) => (
+            <article
+              className="order-card"
+              key={order.id}
+            >
+              <header className="order-card-header">
+                <div>
+                  <span className="order-label">
+                    Order
+                  </span>
 
-            <p>
-              <strong>Status:</strong>{" "}
-              {order.status}
-            </p>
+                  <h2>#{order.id}</h2>
+                </div>
 
-            <p>
-              <strong>Order Date:</strong>{" "}
-              {new Date(
-                order.orderDate
-              ).toLocaleString()}
-            </p>
-
-            <h3>Delivery Address</h3>
-
-            <p>{order.address.fullName}</p>
-
-            <p>
-              {order.address.addressLine1}
-              {order.address.addressLine2
-                ? `, ${order.address.addressLine2}`
-                : ""}
-            </p>
-
-            <p>
-              {order.address.city},{" "}
-              {order.address.state} -{" "}
-              {order.address.postalCode}
-            </p>
-
-            <h3>Items</h3>
-
-            {order.items.map((item) => (
-              <div key={item.id}>
-                <p>
-                  <strong>
-                    {item.product.name}
-                  </strong>
-                </p>
-
-                <p>
-                  ₹{item.price} × {item.quantity}
-                </p>
-
-                <p>
-                  Subtotal: ₹
-                  {(
-                    Number(item.price) *
-                    item.quantity
-                  ).toFixed(2)}
-                </p>
-              </div>
-            ))}
-
-            <h3>
-              Total: ₹
-              {Number(
-                order.totalAmount
-              ).toFixed(2)}
-            </h3>
-
-            {order.status === "CONFIRMED" && (
-              <>
-                <button
-                  onClick={() =>
-                    handleBuyAgain(order.id)
-                  }
-                  disabled={
-                    processingOrderId === order.id
-                  }
-                >
-                  {processingOrderId === order.id
-                    ? "Adding..."
-                    : "Buy Again"}
-                </button>
-
-                {" "}
-
-                {canCancelOrder(order) && (
-                  <button
-                    onClick={() =>
-                      handleCancelOrder(order.id)
-                    }
-                    disabled={
-                      cancellingOrderId === order.id
-                    }
+                <div className="order-header-meta">
+                  <span
+                    className={`order-status ${getStatusClass(
+                      order.status
+                    )}`}
                   >
-                    {cancellingOrderId === order.id
-                      ? "Cancelling..."
-                      : "Cancel Order"}
-                  </button>
-                )}
-              </>
-            )}
+                    {order.status}
+                  </span>
 
-            <hr />
-          </div>
-        ))
+                  <span className="order-date">
+                    {new Date(
+                      order.orderDate
+                    ).toLocaleString()}
+                  </span>
+                </div>
+              </header>
+
+              <div className="order-card-content">
+                <section className="order-items-section">
+                  <h3>Items</h3>
+
+                  <div className="order-items-list">
+                    {order.items?.map((item) => (
+                      <div
+                        className="order-item-row"
+                        key={item.id}
+                      >
+                        <div className="mini-book-cover small">
+                          <span>BOOK</span>
+                        </div>
+
+                        <div className="order-item-copy">
+                          <strong>
+                            {item.product?.name ||
+                              "Book"}
+                          </strong>
+
+                          <span>
+                            ₹
+                            {Number(
+                              item.price
+                            ).toFixed(2)}{" "}
+                            × {item.quantity}
+                          </span>
+                        </div>
+
+                        <strong className="order-item-price">
+                          ₹
+                          {(
+                            Number(item.price) *
+                            item.quantity
+                          ).toFixed(2)}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <aside className="order-delivery-section">
+                  <h3>Delivery Address</h3>
+
+                  {order.address ? (
+                    <>
+                      <strong>
+                        {order.address.fullName}
+                      </strong>
+
+                      <p>
+                        {order.address.addressLine1}
+                        {order.address.addressLine2
+                          ? `, ${order.address.addressLine2}`
+                          : ""}
+                      </p>
+
+                      <p>
+                        {order.address.city},{" "}
+                        {order.address.state} -{" "}
+                        {order.address.postalCode}
+                      </p>
+
+                      <p>
+                        {order.address.country}
+                      </p>
+                    </>
+                  ) : (
+                    <p>
+                      Address information unavailable.
+                    </p>
+                  )}
+                </aside>
+              </div>
+
+              <footer className="order-card-footer">
+                <div className="order-total">
+                  <span>Order Total</span>
+
+                  <strong>
+                    ₹
+                    {Number(
+                      order.totalAmount
+                    ).toFixed(2)}
+                  </strong>
+                </div>
+
+                {order.status === "CONFIRMED" && (
+                  <div className="order-actions">
+                    <button
+                      type="button"
+                      className="secondary-action"
+                      disabled={
+                        processingOrderId ===
+                        order.id
+                      }
+                      onClick={() =>
+                        handleBuyAgain(order.id)
+                      }
+                    >
+                      {processingOrderId ===
+                      order.id
+                        ? "Adding..."
+                        : "Buy Again"}
+                    </button>
+
+                    {canCancelOrder(order) && (
+                      <button
+                        type="button"
+                        className="danger-button"
+                        disabled={
+                          cancellingOrderId ===
+                          order.id
+                        }
+                        onClick={() =>
+                          handleCancelOrder(
+                            order.id
+                          )
+                        }
+                      >
+                        {cancellingOrderId ===
+                        order.id
+                          ? "Cancelling..."
+                          : "Cancel Order"}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </footer>
+            </article>
+          ))}
+        </div>
       )}
     </div>
   );

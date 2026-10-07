@@ -20,6 +20,7 @@ public class OrderService {
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final PaymentRepository paymentRepository;
+    private final GiftPointService giftPointService;
 
     public OrderService(
             OrderRepository orderRepository,
@@ -28,7 +29,8 @@ public class OrderService {
             CartRepository cartRepository,
             CartItemRepository cartItemRepository,
             ProductRepository productRepository,
-            PaymentRepository paymentRepository) {
+            PaymentRepository paymentRepository,
+            GiftPointService giftPointService) {
 
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
@@ -37,6 +39,7 @@ public class OrderService {
         this.cartItemRepository = cartItemRepository;
         this.productRepository = productRepository;
         this.paymentRepository = paymentRepository;
+        this.giftPointService = giftPointService;
     }
 
     @Transactional
@@ -89,7 +92,9 @@ public class OrderService {
                 );
             }
 
-            if (product.getStockQuantity() < quantity) {
+            if (product.getStockQuantity() == null ||
+                    product.getStockQuantity() < quantity) {
+
                 throw new IllegalArgumentException(
                         "Insufficient stock for product: "
                                 + product.getName()
@@ -115,27 +120,12 @@ public class OrderService {
 
         order.setTotalAmount(totalAmount);
 
-        Order savedOrder = orderRepository.save(order);
-
-        for (CartItem cartItem : cart.getItems()) {
-
-            Product product = cartItem.getProduct();
-
-            product.setStockQuantity(
-                    product.getStockQuantity()
-                            - cartItem.getQuantity()
-            );
-
-            productRepository.save(product);
-        }
-
-        cartItemRepository.deleteAll(
-                List.copyOf(cart.getItems())
-        );
-
-        cart.getItems().clear();
-
-        return savedOrder;
+        /*
+         * Checkout creates only a PENDING order snapshot.
+         * Inventory and cart state are committed only after
+         * successful payment.
+         */
+        return orderRepository.save(order);
     }
 
     public List<Order> getUserOrders(Long userId) {
@@ -176,7 +166,9 @@ public class OrderService {
                                 "Order not found for this user"
                         ));
 
-        if (!"CONFIRMED".equalsIgnoreCase(order.getStatus())) {
+        if (!"CONFIRMED".equalsIgnoreCase(
+                order.getStatus())) {
+
             throw new IllegalArgumentException(
                     "Only confirmed orders can be purchased again"
             );
@@ -185,23 +177,30 @@ public class OrderService {
         Cart cart = cartRepository
                 .findByUserId(userId)
                 .orElseGet(() ->
-                        cartRepository.save(new Cart(user))
+                        cartRepository.save(
+                                new Cart(user)
+                        )
                 );
 
-        for (OrderItem orderItem : order.getItems()) {
+        for (OrderItem orderItem :
+                order.getItems()) {
 
-            Product product = orderItem.getProduct();
+            Product product =
+                    orderItem.getProduct();
 
-            if (product.getStockQuantity() <= 0) {
+            if (product.getStockQuantity() == null ||
+                    product.getStockQuantity() <= 0) {
                 continue;
             }
 
-            int requestedQuantity = orderItem.getQuantity();
+            int requestedQuantity =
+                    orderItem.getQuantity();
 
-            int quantityToAdd = Math.min(
-                    requestedQuantity,
-                    product.getStockQuantity()
-            );
+            int quantityToAdd =
+                    Math.min(
+                            requestedQuantity,
+                            product.getStockQuantity()
+                    );
 
             CartItem existingItem =
                     cartItemRepository
@@ -224,19 +223,26 @@ public class OrderService {
                             product.getStockQuantity();
                 }
 
-                existingItem.setQuantity(newQuantity);
+                existingItem.setQuantity(
+                        newQuantity
+                );
 
-                cartItemRepository.save(existingItem);
+                cartItemRepository.save(
+                        existingItem
+                );
 
             } else {
 
-                CartItem newItem = new CartItem(
-                        cart,
-                        product,
-                        quantityToAdd
-                );
+                CartItem newItem =
+                        new CartItem(
+                                cart,
+                                product,
+                                quantityToAdd
+                        );
 
-                cartItemRepository.save(newItem);
+                cartItemRepository.save(
+                        newItem
+                );
             }
         }
 
@@ -249,7 +255,9 @@ public class OrderService {
     }
 
     @Transactional
-    public Order cancelOrder(Long userId, Long orderId) {
+    public Order cancelOrder(
+            Long userId,
+            Long orderId) {
 
         Order order = orderRepository
                 .findByIdAndUserId(orderId, userId)
@@ -258,30 +266,41 @@ public class OrderService {
                                 "Order not found for this user"
                         ));
 
-        if (!"CONFIRMED".equalsIgnoreCase(order.getStatus())) {
+        if (!"CONFIRMED".equalsIgnoreCase(
+                order.getStatus())) {
+
             throw new IllegalArgumentException(
                     "Only confirmed orders can be cancelled"
             );
         }
 
         if (order.getOrderDate() == null) {
+
             throw new IllegalArgumentException(
                     "Order date is unavailable"
             );
         }
 
         LocalDateTime cancellationDeadline =
-                order.getOrderDate().plusHours(48);
+                order.getOrderDate()
+                        .plusHours(48);
 
-        if (LocalDateTime.now().isAfter(cancellationDeadline)) {
+        if (LocalDateTime.now()
+                .isAfter(cancellationDeadline)) {
+
             throw new IllegalArgumentException(
                     "The 48-hour cancellation period has expired"
             );
         }
 
-        for (OrderItem orderItem : order.getItems()) {
+        /*
+         * Restore inventory.
+         */
+        for (OrderItem orderItem :
+                order.getItems()) {
 
-            Product product = orderItem.getProduct();
+            Product product =
+                    orderItem.getProduct();
 
             int currentStock =
                     product.getStockQuantity() == null
@@ -289,20 +308,37 @@ public class OrderService {
                             : product.getStockQuantity();
 
             product.setStockQuantity(
-                    currentStock + orderItem.getQuantity()
+                    currentStock
+                            + orderItem.getQuantity()
             );
 
             productRepository.save(product);
         }
 
-        paymentRepository.findByOrderId(orderId)
+        /*
+         * Refund successful payment and reverse the
+         * Gift Points that were awarded for this order.
+         *
+         * Reversal occurs only when the payment is
+         * currently SUCCESS, preventing double reversal.
+         */
+        paymentRepository
+                .findByOrderId(orderId)
                 .ifPresent(payment -> {
 
                     if ("SUCCESS".equalsIgnoreCase(
                             payment.getStatus())) {
 
                         payment.setStatus("REFUNDED");
-                        paymentRepository.save(payment);
+
+                        paymentRepository.save(
+                                payment
+                        );
+
+                        giftPointService.reversePoints(
+                                userId,
+                                order.getTotalAmount()
+                        );
                     }
                 });
 

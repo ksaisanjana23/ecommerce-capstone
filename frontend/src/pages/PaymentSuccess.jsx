@@ -1,20 +1,40 @@
 import { Link } from "react-router-dom";
 
 function PaymentSuccess() {
-  const paymentData = localStorage.getItem("lastPayment");
-  const orderId = localStorage.getItem("lastOrderId");
+  const paymentData =
+    localStorage.getItem("lastPayment");
 
-  const payment = paymentData
-    ? JSON.parse(paymentData)
-    : null;
+  const orderId =
+    localStorage.getItem("lastOrderId");
+
+  let payment = null;
+
+  try {
+    payment = paymentData
+      ? JSON.parse(paymentData)
+      : null;
+  } catch {
+    payment = null;
+  }
 
   if (!payment) {
     return (
-      <div>
-        <h1>Payment Confirmation</h1>
-        <p>No payment information available.</p>
+      <div className="empty-page-state">
+        <span className="empty-page-icon">
+          🧾
+        </span>
 
-        <Link to="/orders">
+        <h1>Payment Confirmation</h1>
+
+        <p>
+          No recent payment information is
+          available.
+        </p>
+
+        <Link
+          className="button button-primary"
+          to="/orders"
+        >
           View Order History
         </Link>
       </div>
@@ -22,53 +42,89 @@ function PaymentSuccess() {
   }
 
   return (
-    <div>
-      <h1>Payment Successful</h1>
+    <div className="success-page">
+      <div className="success-card">
+        <div className="success-icon">✓</div>
 
-      <p>Your order has been confirmed successfully.</p>
+        <span className="page-eyebrow">
+          Order Confirmed
+        </span>
 
-      <h2>Order Confirmation</h2>
+        <h1>Payment Successful</h1>
 
-      <p>
-        <strong>Order ID:</strong> #{orderId}
-      </p>
+        <p className="success-intro">
+          Thank you. Your order has been confirmed
+          successfully.
+        </p>
 
-      <p>
-        <strong>Payment Status:</strong>{" "}
-        {payment.status}
-      </p>
+        <div className="confirmation-number">
+          <span>Order ID</span>
+          <strong>#{orderId}</strong>
+        </div>
 
-      <p>
-        <strong>Amount Paid:</strong>{" "}
-        ₹{Number(payment.amount).toFixed(2)}
-      </p>
+        <div className="confirmation-details">
+          <div>
+            <span>Payment Status</span>
+            <strong>
+              {payment.status || "SUCCESS"}
+            </strong>
+          </div>
 
-      <p>
-        <strong>Payment Method:</strong>{" "}
-        {payment.paymentMethod}
-      </p>
+          <div>
+            <span>Amount Paid</span>
+            <strong>
+              ₹
+              {Number(
+                payment.amount || 0
+              ).toFixed(2)}
+            </strong>
+          </div>
 
-      <p>
-        <strong>Transaction ID:</strong>{" "}
-        {payment.transactionId}
-      </p>
+          <div>
+            <span>Payment Method</span>
+            <strong>
+              {payment.paymentMethod || "—"}
+            </strong>
+          </div>
 
-      <p>
-        <strong>Payment Date:</strong>{" "}
-        {new Date(payment.paymentDate).toLocaleString()}
-      </p>
+          <div>
+            <span>Payment Date</span>
+            <strong>
+              {payment.paymentDate
+                ? new Date(
+                    payment.paymentDate
+                  ).toLocaleString()
+                : "—"}
+            </strong>
+          </div>
+        </div>
 
-      <br />
+        <div className="success-note">
+          <strong>What's next?</strong>
 
-      <Link to="/orders">
-        View Order History
-      </Link>
+          <p>
+            You can track this order from your order
+            history and use Buy Again whenever you
+            want to purchase the same books again.
+          </p>
+        </div>
 
-      {" | "}
+        <div className="success-actions">
+          <Link
+            className="button button-primary"
+            to="/orders"
+          >
+            View Order History
+          </Link>
 
-      <Link to="/products">
-        Continue Shopping
-      </Link>
+          <Link
+            className="button button-secondary"
+            to="/products"
+          >
+            Continue Shopping
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
