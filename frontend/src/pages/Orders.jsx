@@ -17,6 +17,47 @@ function Orders() {
   const userId = localStorage.getItem("userId");
   const navigate = useNavigate();
 
+  /*
+   * Spring Boot currently returns LocalDateTime values
+   * without timezone information.
+   *
+   * Render stores/creates these timestamps in UTC.
+   * Appending "Z" tells JavaScript to interpret the value
+   * as UTC before converting it to the user's required
+   * India Standard Time display.
+   */
+  const parseBackendDate = (dateValue) => {
+    if (!dateValue) {
+      return null;
+    }
+
+    const hasTimezone =
+      dateValue.endsWith("Z") ||
+      /[+-]\d{2}:\d{2}$/.test(dateValue);
+
+    return new Date(
+      hasTimezone ? dateValue : `${dateValue}Z`
+    );
+  };
+
+  const formatOrderDate = (dateValue) => {
+    const date = parseBackendDate(dateValue);
+
+    if (!date || Number.isNaN(date.getTime())) {
+      return "Date unavailable";
+    }
+
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }).format(date);
+  };
+
   const fetchOrders = async () => {
     if (!userId) {
       setMessage("Please sign in to view your orders.");
@@ -74,15 +115,18 @@ function Orders() {
       return false;
     }
 
-    const orderTime =
-      new Date(order.orderDate).getTime();
+    const orderDate = parseBackendDate(order.orderDate);
 
+    if (!orderDate || Number.isNaN(orderDate.getTime())) {
+      return false;
+    }
+
+    const orderTime = orderDate.getTime();
     const currentTime = Date.now();
-
-    const fortyEightHours =
-      48 * 60 * 60 * 1000;
+    const fortyEightHours = 48 * 60 * 60 * 1000;
 
     return (
+      currentTime >= orderTime &&
       currentTime - orderTime <= fortyEightHours
     );
   };
@@ -183,9 +227,8 @@ function Orders() {
           <h1>Order History</h1>
 
           <p>
-            Review your purchases, buy your
-            favourite books again, or manage
-            eligible orders.
+            Review your purchases, buy your favourite
+            books again, or manage eligible orders.
           </p>
         </div>
 
@@ -210,15 +253,12 @@ function Orders() {
 
       {orders.length === 0 ? (
         <div className="empty-page-state">
-          <span className="empty-page-icon">
-            📚
-          </span>
+          <span className="empty-page-icon">📚</span>
 
           <h2>No orders yet</h2>
 
           <p>
-            Your completed purchases will appear
-            here.
+            Your completed purchases will appear here.
           </p>
 
           <Link
@@ -254,9 +294,7 @@ function Orders() {
                   </span>
 
                   <span className="order-date">
-                    {new Date(
-                      order.orderDate
-                    ).toLocaleString()}
+                    {formatOrderDate(order.orderDate)}
                   </span>
                 </div>
               </header>
@@ -277,8 +315,7 @@ function Orders() {
 
                         <div className="order-item-copy">
                           <strong>
-                            {item.product?.name ||
-                              "Book"}
+                            {item.product?.name || "Book"}
                           </strong>
 
                           <span>
@@ -354,15 +391,13 @@ function Orders() {
                       type="button"
                       className="secondary-action"
                       disabled={
-                        processingOrderId ===
-                        order.id
+                        processingOrderId === order.id
                       }
                       onClick={() =>
                         handleBuyAgain(order.id)
                       }
                     >
-                      {processingOrderId ===
-                      order.id
+                      {processingOrderId === order.id
                         ? "Adding..."
                         : "Buy Again"}
                     </button>
@@ -372,17 +407,13 @@ function Orders() {
                         type="button"
                         className="danger-button"
                         disabled={
-                          cancellingOrderId ===
-                          order.id
+                          cancellingOrderId === order.id
                         }
                         onClick={() =>
-                          handleCancelOrder(
-                            order.id
-                          )
+                          handleCancelOrder(order.id)
                         }
                       >
-                        {cancellingOrderId ===
-                        order.id
+                        {cancellingOrderId === order.id
                           ? "Cancelling..."
                           : "Cancel Order"}
                       </button>
