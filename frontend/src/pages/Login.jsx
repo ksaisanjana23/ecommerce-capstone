@@ -56,6 +56,10 @@ function Login() {
         response.data.email
       );
 
+      window.dispatchEvent(
+        new Event("auth-changed")
+      );
+
       navigate("/products");
     } catch (error) {
       console.error(error);
@@ -116,6 +120,7 @@ function Login() {
 
         <div className="auth-quote">
           <span>BOOKSTORE</span>
+
           <p>
             Discover stories. Build your library.
           </p>
@@ -201,7 +206,7 @@ function Login() {
             className="auth-home-link"
             to="/"
           >
-            ← Back to home
+            ← Back to BookStore
           </Link>
         </div>
       </section>

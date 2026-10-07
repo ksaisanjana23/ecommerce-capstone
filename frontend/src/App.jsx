@@ -4,7 +4,9 @@ import {
   Route,
   NavLink,
   Link,
+  useNavigate,
 } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 import "./App.css";
 
@@ -59,7 +61,9 @@ function Home() {
         <div className="hero-visual">
           <div className="hero-book-card">
             <span className="book-icon">📚</span>
+
             <h3>Explore. Read. Repeat.</h3>
+
             <p>
               Technology, programming, cloud and more.
             </p>
@@ -70,13 +74,18 @@ function Home() {
       <section className="feature-section">
         <div className="section-heading">
           <span>Why BookStore?</span>
-          <h2>Everything you need for your next book</h2>
+
+          <h2>
+            Everything you need for your next book
+          </h2>
         </div>
 
         <div className="feature-grid">
           <article className="feature-card">
             <div className="feature-icon">📖</div>
+
             <h3>Curated Catalogue</h3>
+
             <p>
               Browse books by category and publisher and
               quickly discover titles that interest you.
@@ -85,7 +94,9 @@ function Home() {
 
           <article className="feature-card">
             <div className="feature-icon">✨</div>
+
             <h3>Recommendations</h3>
+
             <p>
               Discover personalized books based on your
               previous order history.
@@ -94,7 +105,9 @@ function Home() {
 
           <article className="feature-card">
             <div className="feature-icon">🎁</div>
+
             <h3>Gift Points</h3>
+
             <p>
               Earn reward points when you purchase books
               and keep track of your balance.
@@ -107,6 +120,59 @@ function Home() {
 }
 
 function Navigation() {
+  const navigate = useNavigate();
+
+  const [userName, setUserName] = useState(
+    localStorage.getItem("userName")
+  );
+
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    Boolean(localStorage.getItem("token"))
+  );
+
+  useEffect(() => {
+    const syncAuthState = () => {
+      setUserName(localStorage.getItem("userName"));
+
+      setIsAuthenticated(
+        Boolean(localStorage.getItem("token"))
+      );
+    };
+
+    window.addEventListener(
+      "auth-changed",
+      syncAuthState
+    );
+
+    window.addEventListener(
+      "storage",
+      syncAuthState
+    );
+
+    return () => {
+      window.removeEventListener(
+        "auth-changed",
+        syncAuthState
+      );
+
+      window.removeEventListener(
+        "storage",
+        syncAuthState
+      );
+    };
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userName");
+
+    setUserName(null);
+    setIsAuthenticated(false);
+
+    navigate("/");
+  };
+
   return (
     <header className="site-header">
       <div className="navbar">
@@ -114,7 +180,10 @@ function Navigation() {
           <span className="brand-mark">B</span>
 
           <div>
-            <span className="brand-name">BookStore</span>
+            <span className="brand-name">
+              BookStore
+            </span>
+
             <span className="brand-tagline">
               Read. Discover. Grow.
             </span>
@@ -151,19 +220,37 @@ function Navigation() {
             Cart
           </NavLink>
 
-          <NavLink
-            to="/login"
-            className="login-link"
-          >
-            Login
-          </NavLink>
+          {isAuthenticated ? (
+            <>
+              <span className="login-link">
+                {userName || "Account"}
+              </span>
 
-          <NavLink
-            to="/register"
-            className="signup-link"
-          >
-            Sign Up
-          </NavLink>
+              <button
+                type="button"
+                className="signup-link"
+                onClick={handleLogout}
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <NavLink
+                to="/login"
+                className="login-link"
+              >
+                Login
+              </NavLink>
+
+              <NavLink
+                to="/register"
+                className="signup-link"
+              >
+                Sign Up
+              </NavLink>
+            </>
+          )}
         </div>
       </div>
     </header>
@@ -177,7 +264,10 @@ function App() {
 
       <main className="app-main">
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route
+            path="/"
+            element={<Home />}
+          />
 
           <Route
             path="/products"
@@ -234,6 +324,7 @@ function App() {
       <footer className="site-footer">
         <div>
           <strong>BookStore</strong>
+
           <p>
             Cloud Fullstack E-Commerce Capstone
           </p>
