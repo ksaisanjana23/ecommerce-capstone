@@ -3,6 +3,7 @@ package com.ecommerce.backend.service;
 import com.ecommerce.backend.entity.Brand;
 import com.ecommerce.backend.entity.Category;
 import com.ecommerce.backend.entity.Product;
+import com.ecommerce.backend.exception.ResourceNotFoundException;
 import com.ecommerce.backend.repository.BrandRepository;
 import com.ecommerce.backend.repository.CategoryRepository;
 import com.ecommerce.backend.repository.ProductRepository;
@@ -35,13 +36,13 @@ public class ProductService {
 
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Category not found with id: " + categoryId
                         ));
 
         Brand brand = brandRepository.findById(brandId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Brand not found with id: " + brandId
                         ));
 
@@ -71,7 +72,7 @@ public class ProductService {
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Product not found with id: " + productId
                         ));
 
@@ -90,7 +91,7 @@ public class ProductService {
 
         Product existingProduct = productRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Product not found with id: " + id
                         ));
 
@@ -103,7 +104,7 @@ public class ProductService {
         Category category =
                 categoryRepository.findById(categoryId)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new ResourceNotFoundException(
                                         "Category not found with id: "
                                                 + categoryId
                                 ));
@@ -111,7 +112,7 @@ public class ProductService {
         Brand brand =
                 brandRepository.findById(brandId)
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new ResourceNotFoundException(
                                         "Brand not found with id: "
                                                 + brandId
                                 ));
@@ -145,7 +146,7 @@ public class ProductService {
     public void deleteProduct(Long id) {
 
         if (!productRepository.existsById(id)) {
-            throw new RuntimeException(
+            throw new ResourceNotFoundException(
                     "Product not found with id: " + id
             );
         }

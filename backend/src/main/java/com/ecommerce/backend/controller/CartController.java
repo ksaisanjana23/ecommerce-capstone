@@ -2,6 +2,7 @@ package com.ecommerce.backend.controller;
 
 import com.ecommerce.backend.entity.Cart;
 import com.ecommerce.backend.service.CartService;
+import com.ecommerce.backend.service.UserAuthorizationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,14 +13,21 @@ import java.util.Map;
 public class CartController {
 
     private final CartService cartService;
+    private final UserAuthorizationService userAuthorizationService;
 
-    public CartController(CartService cartService) {
+    public CartController(
+            CartService cartService,
+            UserAuthorizationService userAuthorizationService) {
+
         this.cartService = cartService;
+        this.userAuthorizationService = userAuthorizationService;
     }
 
     @GetMapping("/{userId}")
     public ResponseEntity<Cart> getCart(
             @PathVariable Long userId) {
+
+        userAuthorizationService.authorizeUser(userId);
 
         return ResponseEntity.ok(
                 cartService.getCart(userId)
@@ -31,11 +39,17 @@ public class CartController {
             @PathVariable Long userId,
             @RequestBody Map<String, Object> request) {
 
+        userAuthorizationService.authorizeUser(userId);
+
         Long productId =
-                Long.valueOf(request.get("productId").toString());
+                Long.valueOf(
+                        request.get("productId").toString()
+                );
 
         Integer quantity =
-                Integer.valueOf(request.get("quantity").toString());
+                Integer.valueOf(
+                        request.get("quantity").toString()
+                );
 
         return ResponseEntity.ok(
                 cartService.addToCart(
@@ -52,8 +66,12 @@ public class CartController {
             @PathVariable Long itemId,
             @RequestBody Map<String, Object> request) {
 
+        userAuthorizationService.authorizeUser(userId);
+
         Integer quantity =
-                Integer.valueOf(request.get("quantity").toString());
+                Integer.valueOf(
+                        request.get("quantity").toString()
+                );
 
         return ResponseEntity.ok(
                 cartService.updateQuantity(
@@ -68,6 +86,8 @@ public class CartController {
     public ResponseEntity<Cart> removeItem(
             @PathVariable Long userId,
             @PathVariable Long itemId) {
+
+        userAuthorizationService.authorizeUser(userId);
 
         return ResponseEntity.ok(
                 cartService.removeItem(

@@ -2,6 +2,7 @@ package com.ecommerce.backend.controller;
 
 import com.ecommerce.backend.entity.Address;
 import com.ecommerce.backend.service.AddressService;
+import com.ecommerce.backend.service.UserAuthorizationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,9 +14,14 @@ import java.util.List;
 public class AddressController {
 
     private final AddressService addressService;
+    private final UserAuthorizationService userAuthorizationService;
 
-    public AddressController(AddressService addressService) {
+    public AddressController(
+            AddressService addressService,
+            UserAuthorizationService userAuthorizationService) {
+
         this.addressService = addressService;
+        this.userAuthorizationService = userAuthorizationService;
     }
 
     @PostMapping("/{userId}")
@@ -23,8 +29,13 @@ public class AddressController {
             @PathVariable Long userId,
             @RequestBody Address address) {
 
+        userAuthorizationService.authorizeUser(userId);
+
         Address createdAddress =
-                addressService.createAddress(userId, address);
+                addressService.createAddress(
+                        userId,
+                        address
+                );
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -34,6 +45,8 @@ public class AddressController {
     @GetMapping("/{userId}")
     public ResponseEntity<List<Address>> getUserAddresses(
             @PathVariable Long userId) {
+
+        userAuthorizationService.authorizeUser(userId);
 
         return ResponseEntity.ok(
                 addressService.getUserAddresses(userId)
@@ -45,8 +58,13 @@ public class AddressController {
             @PathVariable Long userId,
             @PathVariable Long addressId) {
 
+        userAuthorizationService.authorizeUser(userId);
+
         return ResponseEntity.ok(
-                addressService.getAddress(userId, addressId)
+                addressService.getAddress(
+                        userId,
+                        addressId
+                )
         );
     }
 
@@ -55,6 +73,8 @@ public class AddressController {
             @PathVariable Long userId,
             @PathVariable Long addressId,
             @RequestBody Address address) {
+
+        userAuthorizationService.authorizeUser(userId);
 
         return ResponseEntity.ok(
                 addressService.updateAddress(
@@ -70,8 +90,15 @@ public class AddressController {
             @PathVariable Long userId,
             @PathVariable Long addressId) {
 
-        addressService.deleteAddress(userId, addressId);
+        userAuthorizationService.authorizeUser(userId);
 
-        return ResponseEntity.noContent().build();
+        addressService.deleteAddress(
+                userId,
+                addressId
+        );
+
+        return ResponseEntity
+                .noContent()
+                .build();
     }
 }

@@ -1,6 +1,7 @@
 package com.ecommerce.backend.service;
 
 import com.ecommerce.backend.entity.*;
+import com.ecommerce.backend.exception.ResourceNotFoundException;
 import com.ecommerce.backend.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ public class OrderService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
+    private final PaymentRepository paymentRepository;
 
     public OrderService(
             OrderRepository orderRepository,
@@ -25,7 +27,8 @@ public class OrderService {
             AddressRepository addressRepository,
             CartRepository cartRepository,
             CartItemRepository cartItemRepository,
-            ProductRepository productRepository) {
+            ProductRepository productRepository,
+            PaymentRepository paymentRepository) {
 
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
@@ -33,6 +36,7 @@ public class OrderService {
         this.cartRepository = cartRepository;
         this.cartItemRepository = cartItemRepository;
         this.productRepository = productRepository;
+        this.paymentRepository = paymentRepository;
     }
 
     @Transactional
@@ -40,25 +44,27 @@ public class OrderService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "User not found with id: " + userId
                         ));
 
         Address address = addressRepository
                 .findByIdAndUserId(addressId, userId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Address not found for this user"
                         ));
 
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() ->
-                        new RuntimeException("Cart not found"));
+                        new ResourceNotFoundException(
+                                "Cart not found"
+                        ));
 
         if (cart.getItems() == null ||
                 cart.getItems().isEmpty()) {
 
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Cannot create order because cart is empty"
             );
         }
@@ -77,14 +83,14 @@ public class OrderService {
             int quantity = cartItem.getQuantity();
 
             if (quantity <= 0) {
-                throw new RuntimeException(
+                throw new IllegalArgumentException(
                         "Invalid quantity for product: "
                                 + product.getName()
                 );
             }
 
             if (product.getStockQuantity() < quantity) {
-                throw new RuntimeException(
+                throw new IllegalArgumentException(
                         "Insufficient stock for product: "
                                 + product.getName()
                 );
@@ -135,7 +141,7 @@ public class OrderService {
     public List<Order> getUserOrders(Long userId) {
 
         if (!userRepository.existsById(userId)) {
-            throw new RuntimeException(
+            throw new ResourceNotFoundException(
                     "User not found with id: " + userId
             );
         }
@@ -149,7 +155,9 @@ public class OrderService {
         return orderRepository
                 .findByIdAndUserId(orderId, userId)
                 .orElseThrow(() ->
-                        new RuntimeException("Order not found"));
+                        new ResourceNotFoundException(
+                                "Order not found"
+                        ));
     }
 
     @Transactional
@@ -157,17 +165,19 @@ public class OrderService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException(
+                                "User not found"
+                        ));
 
         Order order = orderRepository
                 .findByIdAndUserId(orderId, userId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Order not found for this user"
                         ));
 
         if (!"CONFIRMED".equalsIgnoreCase(order.getStatus())) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Only confirmed orders can be purchased again"
             );
         }
@@ -233,7 +243,7 @@ public class OrderService {
         return cartRepository
                 .findByUserId(userId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Unable to load cart"
                         ));
     }
@@ -244,18 +254,18 @@ public class OrderService {
         Order order = orderRepository
                 .findByIdAndUserId(orderId, userId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Order not found for this user"
                         ));
 
         if (!"CONFIRMED".equalsIgnoreCase(order.getStatus())) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Only confirmed orders can be cancelled"
             );
         }
 
         if (order.getOrderDate() == null) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Order date is unavailable"
             );
         }
@@ -264,7 +274,7 @@ public class OrderService {
                 order.getOrderDate().plusHours(48);
 
         if (LocalDateTime.now().isAfter(cancellationDeadline)) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "The 48-hour cancellation period has expired"
             );
         }
@@ -284,6 +294,17 @@ public class OrderService {
 
             productRepository.save(product);
         }
+
+        paymentRepository.findByOrderId(orderId)
+                .ifPresent(payment -> {
+
+                    if ("SUCCESS".equalsIgnoreCase(
+                            payment.getStatus())) {
+
+                        payment.setStatus("REFUNDED");
+                        paymentRepository.save(payment);
+                    }
+                });
 
         order.setStatus("CANCELLED");
 

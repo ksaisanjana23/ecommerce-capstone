@@ -2,6 +2,7 @@ package com.ecommerce.backend.controller;
 
 import com.ecommerce.backend.entity.Product;
 import com.ecommerce.backend.service.ProductService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,13 +16,14 @@ public class ProductController {
 
     public ProductController(
             ProductService productService) {
+
         this.productService = productService;
     }
 
     // Create a new product
     @PostMapping
     public Product createProduct(
-            @RequestBody Product product) {
+            @Valid @RequestBody Product product) {
 
         return productService.createProduct(product);
     }
@@ -29,6 +31,7 @@ public class ProductController {
     // Get all products
     @GetMapping
     public List<Product> getAllProducts() {
+
         return productService.getAllProducts();
     }
 
@@ -64,7 +67,8 @@ public class ProductController {
     public ResponseEntity<Product> getProductById(
             @PathVariable Long id) {
 
-        return productService.getProductById(id)
+        return productService
+                .getProductById(id)
                 .map(ResponseEntity::ok)
                 .orElse(
                         ResponseEntity.notFound().build()
@@ -75,7 +79,7 @@ public class ProductController {
     @PutMapping("/{id}")
     public Product updateProduct(
             @PathVariable Long id,
-            @RequestBody Product product) {
+            @Valid @RequestBody Product product) {
 
         return productService
                 .updateProduct(id, product);
