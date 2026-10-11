@@ -279,3 +279,8 @@ Cloud Fullstack Developer Capstone Project
 ## License
 
 Developed for educational and demonstration purposes.
+
+
+## Project Demonstration Video
+
+[Watch the E-commerce Project Demo](./ecommerce-demo-compressed.mp4)
